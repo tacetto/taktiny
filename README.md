@@ -1,0 +1,94 @@
+# Ureinuz
+
+**Ureinuz** is an object-oriented neural network framework and universal training engine built on top of JAX. 
+
+It provides an intuitive, stateful design where models encapsulate their own weights while leveraging the lightning-fast, purely functional compilation of JAX. Every `ureinuz.nn.Module` and `Parameter` is a natively registered PyTree, allowing stateful objects to compile flawlessly with `jax.jit` and `optax`.
+
+## ✨ Features
+- **Object-Oriented JAX**: Build models using stateful `nn.Module` and `Parameter` classes without manually separating parameters from architecture.
+- **Universal Trainer**: A polished, generic `Trainer` engine that can train models natively across multiple JAX-based frameworks.
+- **Unified Vision & Language Zoo**: Built-in reference implementations of ConvNeXt, UNet, Autoencoder, and LLaMA, sharing unified configuration structs.
+
+## 🏗️ Building Modules
+
+`ureinuz` embraces an **Object-Oriented** philosophy. Parameters are stored directly inside the class using `nn.Parameter`. Because `nn.Module` is a registered JAX PyTree, JAX functions (like `jax.jit` or `jax.value_and_grad`) understand the objects natively.
+
+```python
+import jax
+import jax.numpy as jnp
+from ureinuz.nn import Module, Linear
+from ureinuz import Rngs
+
+class SimpleMLP(Module):
+    def __init__(self, in_features, hidden_features, out_features, seed: Rngs):
+        self.fc1 = Linear(in_features, hidden_features, seed=seed)
+        self.fc2 = Linear(hidden_features, out_features, seed=seed)
+
+    def __call__(self, x):
+        x = self.fc1(x)
+        x = jax.nn.relu(x)
+        x = self.fc2(x)
+        return x
+
+# Initialize with a random seed generator
+seed_generator = Rngs(42)
+model = SimpleMLP(in_features=64, hidden_features=128, out_features=10, seed=seed_generator)
+
+# State management for saving and checkpointing
+state_dict = model.state_dict() # or model.flat_state_dict()
+model.load_state_dict(state_dict)
+```
+
+## 🧠 The Universal Trainer
+
+The `Trainer` class is designed to train neural networks robustly. When initialized, it automatically inspects the model and internally handles parameter extraction and state updates. This allows it to train models from native `ureinuz` or external JAX frameworks (such as `flax.linen`, `flax.nnx`, or `equinox`).
+
+You can customize training with `TrainingConfig` (which supports setting maximum steps, learning rates, epochs, and Optax optimizers) and pass any standard data iterable to the `DatasetConfig`.
+
+```python
+import optax
+from ureinuz.trainer import Trainer, TrainingConfig, DatasetConfig
+
+trainer = Trainer(
+    model=model,
+    loss_fn=my_loss_function,
+    training_config=TrainingConfig(
+        epochs=5,
+        max_steps=2000,
+        learning_rate=1e-3,
+        optimizer=optax.adamw(1e-3),
+        log_interval=50
+    ),
+    dataset_config=DatasetConfig(dataloader=my_batch_generator)
+)
+
+trainer.train()
+```
+The trainer provides a gorgeous `rich` progress bar in the terminal, complete with time-per-step tracking!
+
+## 🚀 Quick Start (Using the existed model)
+
+```python
+import jax.numpy as jnp
+from ureinuz import Rngs
+from ureinuz.recipes import CNNModelConfig, Autoencoder
+from ureinuz.trainer import Trainer, TrainingConfig, DatasetConfig
+
+# 1. Initialize a Stateful Model from the Zoo
+config = CNNModelConfig(in_channels=3, dims=[64, 128], latent_dim=32)
+model = Autoencoder(config, seed=Rngs(42))
+
+# 2. Define a standard Loss Function
+def mse_loss(params, batch):
+    reconstructed, _ = params(batch)
+    return jnp.mean((reconstructed - batch) ** 2)
+
+# 3. Train!
+trainer = Trainer(
+    model=model,
+    loss_fn=mse_loss,
+    training_config=TrainingConfig(max_steps=1000),
+    dataset_config=DatasetConfig(dataloader=my_batch_generator)
+)
+trainer.train()
+```
