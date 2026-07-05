@@ -37,7 +37,7 @@ class SequentialStack(Module):
 
     def __call__(self, f, carry, *args, **kwargs):
         def apply_fn(carry, layer):
-            out = f(layer, carry, *args, **kwargs)
+            out = jax.checkpoint(f)(layer, carry, *args, **kwargs)
             return out, None
 
         out, _ = jax.lax.scan(apply_fn, carry, self.stacked)

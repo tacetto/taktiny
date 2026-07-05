@@ -1,6 +1,29 @@
 import jax
 from .config import TrainingConfig, DatasetConfig
 
+import jax.numpy as jnp
+import optax
+
+def _is_frozen(x):
+    """Heuristic to detect if a parameter should be frozen."""
+    if not hasattr(x, 'dtype') or not jnp.issubdtype(x.dtype, jnp.inexact):
+        return True
+    if x.dtype == getattr(jnp, 'float8_e4m3fn', None):
+        return True
+    # Freeze 1D arrays (LayerNorms, biases)
+    if len(x.shape) == 1:
+        return True
+    # Freeze massive matrices (like 2048x151936 embeddings/lm_head). LoRA matrices have small rank (<= 256).
+    if len(x.shape) == 2 and min(x.shape) > 256:
+        return True
+    return False
+
+def _safe_add(p, u):
+    """Safely apply updates only to trainable parameters."""
+    if _is_frozen(p):
+        return p
+    return p + u
+
 class Trainer:
     def __init__(self, model, loss_fn, training_config: TrainingConfig, dataset_config: DatasetConfig):
         self.model = model
@@ -47,6 +70,21 @@ class Trainer:
         else:
             raise ValueError("Unsupported model type")
             
+    def _setup_optimizer(self):
+        """Configures the optimizer with auto-freezing for quantized/massive parameters."""
+        if self.training_config.optimizer is not None:
+            return self.training_config.optimizer
+            
+        base_opt = optax.adamw(self.training_config.learning_rate, weight_decay=self.training_config.weight_decay)
+        
+        def get_label(x):
+            return 'frozen' if _is_frozen(x) else 'trainable'
+            
+        return optax.multi_transform(
+            {'trainable': base_opt, 'frozen': optax.set_to_zero()},
+            lambda p: jax.tree_util.tree_map(get_label, p)
+        )
+            
     def train(self):
         from rich.console import Console
         from rich.progress import Progress, TextColumn, BarColumn, TimeElapsedColumn, TimeRemainingColumn
@@ -56,24 +94,19 @@ class Trainer:
         console.print(f"Epochs: [bold]{self.training_config.epochs}[/bold] | Max Steps: [bold]{self.training_config.max_steps}[/bold]")
         
         # 1. Initialize Optimizer
-        optimizer = self.training_config.optimizer
-        if optimizer is None:
-            import optax
-            optimizer = optax.adamw(self.training_config.learning_rate, weight_decay=self.training_config.weight_decay)
-            
+        optimizer = self._setup_optimizer()
         params = self.extract_params()
         opt_state = optimizer.init(params)
         
         # 2. Define train_step
-        import jax
-        import optax
-        
-        @jax.jit
         def train_step(params, opt_state, batch):
-            loss, grads = jax.value_and_grad(self.loss_fn)(params, batch)
+            loss, grads = jax.value_and_grad(self.loss_fn, allow_int=True)(params, batch)
             updates, new_opt_state = optimizer.update(grads, opt_state, params)
-            new_params = optax.apply_updates(params, updates)
+            new_params = jax.tree_util.tree_map(_safe_add, params, updates)
             return new_params, new_opt_state, loss
+            
+        if getattr(self.training_config, "jit_compile", False):
+            train_step = jax.jit(train_step)
 
         # 3. Training Loop
         import time

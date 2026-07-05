@@ -1,7 +1,7 @@
 import jax
 import jax.numpy as jnp
 from .... import nn, Rngs
-from ..config.cnn import CNNModelConfig
+from ..configs.cnn import CNNModelConfig
 
 class ConvNeXtBlock(nn.Module):
     def __init__(self, dim: int, seed: Rngs):

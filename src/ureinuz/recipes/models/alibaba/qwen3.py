@@ -1,12 +1,13 @@
 import jax
 from dataclasses import replace
+import jax.numpy as jnp
 
 from ..configs.transformer import CausalLM, TransformerAuxilialary
 from ...modules import RotaryEmbedding, GateMLP, Attention
 from .... import nn, Rngs
 
 
-class LlamaTransformerBlock(nn.Module):
+class QwenTransformerBlock(nn.Module):
     def __init__(self, config, seed: Rngs):
         self.norm1 = nn.RMSNorm(config.hidden_size, eps=config.norm_eps)
         
@@ -19,6 +20,7 @@ class LlamaTransformerBlock(nn.Module):
                 config.head_dim, **(getattr(config, 'posemb_kwargs', {}) or {})
             ),
             bias=config.use_attention_bias,
+            use_qkv_norm=config.use_qkv_norm,
             dtype=config.dtype,
             seed=seed
         )
@@ -55,18 +57,17 @@ class LlamaTransformerBlock(nn.Module):
         return x, new_cache
 
 
-class LlamaModel(nn.Module):
+class QwenModel(nn.Module):
     def __init__(self, config, seed: Rngs):
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, seed=seed)
         self.layers = nn.SequentialStack(
-            LlamaTransformerBlock, config, num_stack=config.num_hidden_layers, seed=seed
+            QwenTransformerBlock, config, num_stack=config.num_hidden_layers, seed=seed
         )
         self.norm = nn.RMSNorm(config.hidden_size)
 
     def __call__(self, x: jax.Array, attention_mask: jax.Array = None, aux: TransformerAuxilialary = None):
         x = self.embed_tokens(x)
         
-        # Unpack aux into primitive arrays for the scan carry
         has_cache = aux is not None and aux.key_cache is not None
         if has_cache:
             carry = (x, (aux.key_cache, aux.value_cache), 0)
@@ -81,6 +82,7 @@ class LlamaModel(nn.Module):
             
             current_kv = (full_kv_cache[0][layer_idx], full_kv_cache[1][layer_idx]) if has_cache else None
             
+            # TODO: Handle sliding window attention per layer_types if config supports it.
             h, next_cache = layer(
                 h, 
                 attention_mask=attention_mask, 
@@ -108,10 +110,10 @@ class LlamaModel(nn.Module):
         return self.norm(x), aux
 
 
-class LlamaCausalLM(CausalLM):
+class QwenCausalLM(CausalLM):
     def __init__(self, config, seed: Rngs):
         self.config = config
-        self.model = LlamaModel(config, seed=seed)
+        self.model = QwenModel(config, seed=seed)
         self.lm_head = nn.build_linear(config.hidden_size, config.vocab_size, bias=config.use_bias, dtype=config.dtype, seed=seed)
 
     @classmethod

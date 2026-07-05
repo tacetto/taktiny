@@ -160,13 +160,22 @@ class Parameter(Module):
         self.value = array
 
     def __repr__(self):
-        return f"Parameter(shape={self.value.shape}, dtype={self.value.dtype})"
+        return f"Parameter(shape={getattr(self.value, 'shape', 'None')}, dtype={getattr(self.value, 'dtype', 'None')})"
 
     def __jax_array__(self):
         return self.value
 
     def __getattr__(self, name):
         return getattr(self.value, name)
+        
+    def tree_flatten(self):
+        return (self.value,), None
+        
+    @classmethod
+    def tree_unflatten(cls, aux_data, children):
+        obj = object.__new__(cls)
+        obj.value = children[0]
+        return obj
 
 def _make_magic_methods():
     for op in ['add', 'sub', 'mul', 'truediv', 'floordiv', 'mod', 'pow', 'matmul', 

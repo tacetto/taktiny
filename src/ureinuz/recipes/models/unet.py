@@ -1,7 +1,6 @@
 import jax
 import jax.numpy as jnp
 from ... import nn, Rngs
-from .config.cnn import CNNModelConfig
 
 class TimeEmbedding(nn.Module):
     def __init__(self, time_dim: int, seed: Rngs):
@@ -18,12 +17,12 @@ class TimeEmbedding(nn.Module):
 class UNetBlock(nn.Module):
     def __init__(self, in_channels: int, out_channels: int, time_emb_dim: int, seed: Rngs):
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding="SAME", seed=seed)
-        self.norm1 = nn.LayerNorm(out_channels)
+        self.norm1 = nn.GroupNorm(num_groups=32, num_channels=out_channels)
         
         self.time_proj = nn.Linear(time_emb_dim, out_channels, seed=seed)
         
         self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding="SAME", seed=seed)
-        self.norm2 = nn.LayerNorm(out_channels)
+        self.norm2 = nn.GroupNorm(num_groups=32, num_channels=out_channels)
         
         if in_channels != out_channels:
             self.res_conv = nn.Conv2d(in_channels, out_channels, kernel_size=1, seed=seed)
@@ -55,32 +54,37 @@ class UNetBlock(nn.Module):
         return h + res
 
 class UNet(nn.Module):
-    def __init__(self, config: CNNModelConfig, seed: Rngs):
-        time_dim = config.dims[0]
+    def __init__(
+        self, 
+        in_channels: int, 
+        dims: list[int], 
+        seed: Rngs = None
+    ):
+        time_dim = dims[0]
         self.time_embedding = TimeEmbedding(time_dim, seed=seed)
         
         time_emb_dim = time_dim * 4
         
-        self.conv_in = nn.Conv2d(config.in_channels, config.dims[0], kernel_size=3, padding="SAME", seed=seed)
+        self.conv_in = nn.Conv2d(in_channels, dims[0], kernel_size=3, padding="SAME", seed=seed)
         
         self.down_blocks = nn.List()
-        in_channels = config.dims[0]
-        for dim in config.dims:
+        current_channels = dims[0]
+        for dim in dims:
             self.down_blocks.layers.append(
-                UNetBlock(in_channels, dim, time_emb_dim, seed=seed)
+                UNetBlock(current_channels, dim, time_emb_dim, seed=seed)
             )
             # Add downsample layer except for last
-            if dim != config.dims[-1]:
+            if dim != dims[-1]:
                 self.down_blocks.layers.append(
                     nn.Conv2d(dim, dim, kernel_size=3, stride=2, padding="SAME", seed=seed)
                 )
-            in_channels = dim
+            current_channels = dim
             
-        self.mid_block1 = UNetBlock(config.dims[-1], config.dims[-1], time_emb_dim, seed=seed)
-        self.mid_block2 = UNetBlock(config.dims[-1], config.dims[-1], time_emb_dim, seed=seed)
+        self.mid_block1 = UNetBlock(dims[-1], dims[-1], time_emb_dim, seed=seed)
+        self.mid_block2 = UNetBlock(dims[-1], dims[-1], time_emb_dim, seed=seed)
         
         self.up_blocks = nn.List()
-        reversed_dims = list(reversed(config.dims))
+        reversed_dims = list(reversed(dims))
         
         for i, dim in enumerate(reversed_dims):
             # Upsample logic
@@ -89,13 +93,13 @@ class UNet(nn.Module):
                 
             # Input to upblock is the previous output + the skip connection
             # Which means the in_channels is dim * 2 (except the first one which is from mid_block)
-            block_in_channels = in_channels + dim
+            block_in_channels = current_channels + dim
             self.up_blocks.layers.append(
                 UNetBlock(block_in_channels, dim, time_emb_dim, seed=seed)
             )
-            in_channels = dim
+            current_channels = dim
             
-        self.conv_out = nn.Conv2d(config.dims[0], config.in_channels, kernel_size=3, padding="SAME", seed=seed)
+        self.conv_out = nn.Conv2d(dims[0], in_channels, kernel_size=3, padding="SAME", seed=seed)
 
     def __call__(self, x: jax.Array, timesteps: jax.Array) -> jax.Array:
         t_emb = self.time_embedding(timesteps)

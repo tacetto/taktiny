@@ -11,6 +11,7 @@ class TrainingConfig:
     weight_decay: float = 0.0
     log_interval: int = 10
     seed: int = 42
+    jit_compile: bool = False
 
 @dataclass(frozen=True)
 class DatasetConfig:
