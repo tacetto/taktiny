@@ -1,0 +1,67 @@
+# Copyright 2026 Shinapri
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import annotations
+
+from pathlib import Path
+from huggingface_hub import hf_hub_download
+import json
+
+
+class ModelConfig:
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+            
+    def __getattr__(self, name):
+        # Gracefully return None for missing config keys instead of crashing
+        return None
+
+    @classmethod
+    def load_config(cls, path_or_repo, filename='config.json', subfolder=None, local=False):
+        if local:
+            config_path = Path(path_or_repo).resolve()
+            if subfolder:
+                config_path = config_path / subfolder
+
+            config_path = config_path / 'config.json'
+
+        else:
+            try:
+                config_path = hf_hub_download(
+                    repo_id=str(path_or_repo), 
+                    subfolder=subfolder if subfolder else None, 
+                    filename=filename
+                )
+                
+            except Exception as e:
+                print(f'config.json not found in repo: {e}')
+                return None
+
+        try:
+            with open(config_path, 'r') as f:
+                config = json.load(f)
+
+        except Exception as e:
+            print(f'Error loading config.json: {e}')
+            return None
+        
+        return cls(**config)
+    
+    def __repr__(self):
+        config_str = json.dumps(self.__dict__, indent=2, default=str)
+        return f"{self.__class__.__name__} {config_str}"
+
+
+__all__ = ['ModelConfig']

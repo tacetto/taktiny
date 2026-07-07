@@ -16,21 +16,23 @@ Public API for retrieving registered architectures from the Hugging Face Hub
 if implemented in this library.
 """
 
-from . import architectures
-from .utils import registry
+from __future__ import annotations
 
+from ureinuz.maestro import opus
+from ureinuz.maestro._livret import repertoire
+
+from jax.sharding import Mesh
+from jax.experimental import mesh_utils
 from huggingface_hub import hf_hub_download
 import json
 
 
 class Maestro:
-
     @classmethod
     def from_pretrained(
         cls, 
         repo_or_path, 
         mesh=None, 
-        sharding=None, 
         sharding_rules=None, 
         local=False,
         **kwargs
@@ -50,16 +52,10 @@ class Maestro:
             'Unsupported architectures.'
 
         key = keys[0]
-        if key not in registry.available():
+        if key not in repertoire.available():
             raise NotImplementedError("Unsupported architectures.")
             
-        data = registry.get(key)
-        model_cfg = data['config']
-        model_cls = data['class']
-
-        import jax
-        from jax.sharding import Mesh
-        from jax.experimental import mesh_utils
+        model_cls = repertoire.get(key)
         
         # Parse Mesh if provided as a dict (e.g. {'data': 4, 'model': 2})
         if isinstance(mesh, dict):

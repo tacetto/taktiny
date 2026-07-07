@@ -1,10 +1,27 @@
+# Copyright 2026 Shinapri
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Attention modules"""
+
+from __future__ import annotations
+
 import jax
 import jax.numpy as jnp
-from .. import nn
 
-from .posemb import RotaryEmbedding
-
+from ureinuz import nn
+from ureinuz.layers.posemb import RotaryEmbedding
 from ureinuz.utils.typing import ShardMode, DType
+
 
 class Attention(nn.Module):
     def __init__(
@@ -24,6 +41,10 @@ class Attention(nn.Module):
         k_axis_names: tuple[str | None, ...] | None = None,
         v_axis_names: tuple[str | None, ...] | None = None,
         o_axis_names: tuple[str | None, ...] | None = None,
+        q_bias: bool = None,
+        k_bias: bool = None,
+        v_bias: bool = None,
+        o_bias: bool = None,
         shard_mode: ShardMode = ShardMode.AUTO,
         quant=None,
         dot_general=None,
@@ -40,12 +61,35 @@ class Attention(nn.Module):
         self.num_kv_groups = self.num_heads // self.num_kv_heads
         
         self.pos_emb = pos_emb
+        if bias and any(q_bias, k_bias, v_bias, o_bias):
+            bias = False
+            q_bias = q_bias == True
+            k_bias = k_bias == True
+            v_bias = v_bias == True
+            o_bias = o_bias == True
         
         # Projections (Leveraging General Linear!)
-        self.q_proj = nn.Linear(hidden_size, (self.num_heads, self.head_dim), dtype=dtype, bias=bias, rngs=rngs, axis_names=q_axis_names, shard_mode=shard_mode, quant=quant, dot_general=dot_general)
-        self.k_proj = nn.Linear(self.context_dim, (self.num_kv_heads, self.head_dim), dtype=dtype, bias=bias, rngs=rngs, axis_names=k_axis_names, shard_mode=shard_mode, quant=quant, dot_general=dot_general)
-        self.v_proj = nn.Linear(self.context_dim, (self.num_kv_heads, self.head_dim), dtype=dtype, bias=bias, rngs=rngs, axis_names=v_axis_names, shard_mode=shard_mode, quant=quant, dot_general=dot_general)
-        self.o_proj = nn.Linear((self.num_heads, self.head_dim), hidden_size, dtype=dtype, bias=bias, rngs=rngs, axis_names=o_axis_names, shard_mode=shard_mode, quant=quant, dot_general=dot_general)
+        self.q_proj = nn.Linear(
+            hidden_size, (self.num_heads, self.head_dim), 
+            dtype=dtype, bias=q_bias or bias, rngs=rngs, 
+            axis_names=q_axis_names, shard_mode=shard_mode, 
+            quant=quant, dot_general=dot_general
+        )
+        self.k_proj = nn.Linear(
+            self.context_dim, (self.num_kv_heads, self.head_dim), 
+            dtype=dtype, bias=k_bias or bias, rngs=rngs, axis_names=k_axis_names, 
+            shard_mode=shard_mode, quant=quant, dot_general=dot_general
+        )
+        self.v_proj = nn.Linear(
+            self.context_dim, (self.num_kv_heads, self.head_dim), 
+            dtype=dtype, bias=v_bias or bias, rngs=rngs, axis_names=v_axis_names, 
+            shard_mode=shard_mode, quant=quant, dot_general=dot_general
+        )
+        self.o_proj = nn.Linear(
+            (self.num_heads, self.head_dim), hidden_size, 
+            dtype=dtype, bias=o_bias or bias, rngs=rngs, axis_names=o_axis_names, 
+            shard_mode=shard_mode, quant=quant, dot_general=dot_general
+        )
 
         self.q_norm = self.k_norm = None
 

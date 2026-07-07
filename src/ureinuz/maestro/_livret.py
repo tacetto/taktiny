@@ -11,36 +11,31 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""A high-performance Deep Learning framework built on JAX"""
+"""Module for register any model architectures"""
 
-class Registry:
+from __future__ import annotations
 
+class Repertoire:
     def __init__(self):
-        self._registry = {}
+        self._repertoire = {}
         self._classes = set()
 
-    def register(self, key, config, architecture):
-        if architecture in self._classes:
-            raise ValueError(f'Architecture registration governs many-to-one. found duplicated for {architecture.__name__}')
-        
-        value = {
-            'config': config,
-            'class': architecture
-        }
+    def register(self, key, cls):
+        if cls in self._classes:
+            raise ValueError(f'Architecture registration governs many-to-one. found duplicated for {cls.__name__}')
 
-        self._classes.add(architecture)
-        self._registry[key] = value
-
+        self._classes.add(cls)
+        self._repertoire[key] = cls
 
     def available(self):
-        return list(self._registry.keys())
+        return list(self._repertoire.keys())
     
     def available_classes(self):
         return self._classes
     
     def get(self, key):
-        return self._registry.get(key)
+        return self._repertoire.get(key)
     
-registry = Registry()
+repertoire = Repertoire()
 
-__all__ = ['Registry', 'registry']
+__all__ = ['Repertoire', 'repertoire']

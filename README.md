@@ -53,12 +53,11 @@ from ureinuz._composer.maestro import Maestro
 mesh = Mesh(jax.devices(), ('dp', 'tp'))
 
 # 2. Let Maestro download, quantize, and shard the weights dynamically
-with jax.set_mesh(mesh):
-    model = Maestro.from_pretrained(
-        "HuggingFaceTB/SmolLM2-135M-Instruct", 
-        dtype="int4", # Dynamically quantize weights to INT4 
-        mesh=mesh     # Distribute weights according to the mesh
-    )
+model = Maestro.from_pretrained(
+    "HuggingFaceTB/SmolLM2-135M-Instruct", 
+    dtype="int4", # Dynamically quantize weights to INT4 
+    mesh=mesh     # Distribute weights according to the mesh
+)
 
 print("Model successfully loaded and sharded!")
 ```

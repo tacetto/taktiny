@@ -1,6 +1,23 @@
-import optax
-from dataclasses import dataclass, field
-from typing import Any, Callable, Optional, Iterable
+# Copyright 2026 Shinapri
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Trainer config"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any, Optional, Iterable, Callable
+
 
 @dataclass(frozen=True)
 class TrainingConfig:
@@ -16,6 +33,13 @@ class TrainingConfig:
 @dataclass(frozen=True)
 class DatasetConfig:
     # A generic iterable that yields batches (e.g. tf.data, PyTorch DataLoader, or custom generator)
-    dataloader: Iterable[Any]
+    dataloader: Iterable[Any]   
     validation_dataloader: Optional[Iterable[Any]] = None
+    repo_id: Optional[str] = None
+    process_fn: Optional[Callable] = None        # process dataset downloaded from given `repo_id`; return Tuple[train, validation] otherwise train
+    loader_type: Optional[str | Callable] = None # apply loader after `process_fn` e.g. 'grain', or Callable return custom loader 
     shuffle: bool = True
+    seed: int = 42              # shuffle seed if `shuffle == True`
+
+
+__all__ = ['TrainingConfig', 'DatasetConfig']

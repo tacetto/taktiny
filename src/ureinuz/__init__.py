@@ -20,4 +20,14 @@ __description__ = (
     "full-lifecycle trainers, and native architectures spanning Transformers, Diffusion, and SSMs."
 )
 
-from ._composer import Maestro
+from ureinuz.maestro._prelude import Maestro
+from ureinuz.maestro._config import ModelConfig
+from ureinuz.trainer.trainer import Trainer
+from ureinuz.trainer.config import TrainingConfig, DatasetConfig
+from ureinuz import nn
+
+from ureinuz.maestro.opus import *
+
+from ureinuz import maestro as maestro
+
+__all__ = ['Maestro', 'ModelConfig', 'Trainer', 'TrainingConfig', 'DatasetConfig']

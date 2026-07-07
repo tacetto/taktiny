@@ -1,3 +1,19 @@
+# Copyright 2026 Shinapri
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import annotations
+
 import os
 import json
 import jax
@@ -5,7 +21,8 @@ import jax.numpy as jnp
 from pathlib import Path
 from huggingface_hub import hf_hub_download
 from safetensors.flax import save_file
-from ..nn import Module, Rngs
+from ureinuz.nn import Module, Rngs
+
 
 class PretrainedModel(Module):
 
@@ -29,42 +46,28 @@ class PretrainedModel(Module):
         }
         with open(index_path, "w") as f:
             json.dump(index_data, f, indent=2)
+            
 
     @classmethod
-    def load_config(cls, path_or_repo, subfolder=None, local=False):
-        if local:
-            config_path = Path(path_or_repo).resolve()
-            if subfolder:
-                config_path = config_path / subfolder
-            config_path = config_path / 'config.json'
-        else:
-            try:
-                if subfolder:
-                    config_path = hf_hub_download(repo_id=str(path_or_repo), subfolder=subfolder, filename="config.json")
-                else:
-                    config_path = hf_hub_download(repo_id=str(path_or_repo), filename="config.json")
-            except Exception as e:
-                print(f'config.json not found in repo: {e}')
-                return None
-
-        try:
-            with open(config_path, 'r') as f:
-                config = json.load(f)
-            return config
-        except Exception as e:
-            print(f'Error loading config.json: {e}')
-            return None
-
-    @classmethod
-    def from_pretrained(cls, path_or_repo, config, module_map=None, local=False, dtype=None, subfolder=None, mesh=None, sharding_rules=None, **kwargs):
+    def from_pretrained(
+        cls, 
+        path_or_repo, 
+        config, 
+        module_map=None, 
+        local=False, 
+        dtype=None, 
+        subfolder=None, 
+        mesh=None, 
+        sharding_rules=None, 
+        **kwargs
+    ):
         """
         Loads safetensors weights into a newly instantiated model.
         Supports both single-file (model.safetensors) and sharded models.
         """
         if dtype is not None:
-            import dataclasses
-            config = dataclasses.replace(config, dtype=dtype)
-            
+            setattr(config, 'dtype', dtype)
+
         path_or_repo_str = str(path_or_repo)
         module_map = module_map or []
         if isinstance(module_map, dict):
@@ -134,7 +137,7 @@ class PretrainedModel(Module):
                         target_var = current_state_dict[k_mapped]
                         
                         if value.ndim == 2:
-                            if value.shape[0] != target_var.shape[0]:
+                            if k_mapped.endswith(".weight") or k_mapped.endswith(".weights_q") or ".lora_" in k_mapped:
                                 value = value.T
                         if value.shape != target_var.shape:
                             value = value.reshape(target_var.shape)
@@ -160,7 +163,7 @@ class PretrainedModel(Module):
                         # We always transpose if value.shape[0] == out_features of original layer.
                         # Original layer out_features = value.shape[0] if it was (out, in).
                         if value.ndim == 2:
-                            if value.shape[0] != target_var.shape[0]:
+                            if k_mapped.endswith(".weight") or k_mapped.endswith(".weights_q") or ".lora_" in k_mapped:
                                 value = value.T
                             
                         from ..utils.quantization import (
@@ -220,7 +223,7 @@ class PretrainedModel(Module):
                                 
                                 layer_shape = target_var.shape[1:]
                                 if value.ndim == 2:
-                                    if value.shape[0] != target_var.shape[1]:
+                                    if k_mapped.endswith(".weight") or k_mapped.endswith(".weights_q") or ".lora_" in k_mapped:
                                         value = value.T
                                 if value.shape != layer_shape:
                                     value = value.reshape(layer_shape)
@@ -234,7 +237,7 @@ class PretrainedModel(Module):
                                 target_var = current_state_dict[k_stacked_q]
                                 
                                 if value.ndim == 2:
-                                    if value.shape[0] != target_var.shape[1]:
+                                    if k_mapped.endswith(".weight") or k_mapped.endswith(".weights_q") or ".lora_" in k_mapped:
                                         value = value.T
                                     
                                 from ..utils.quantization import (
@@ -297,3 +300,5 @@ class PretrainedModel(Module):
         # 5. Inject actual arrays into the PyTree skeleton
         state.load_flat_state_dict(new_state)
         return state
+    
+
