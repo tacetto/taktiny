@@ -13,13 +13,12 @@
 # limitations under the License.
 """Base modules for implementing a deep neural network model"""
 
-from ureinuz import nn
 
-from nn.block import *
-from nn.conv import *
-from nn.embedding import *
-from nn.linear import *
-from nn.lora import *
-from nn.module import *
-from nn.norm import *
-from nn.rng import *
+from .block import *
+from .conv import *
+from .embedding import *
+from .linear import *
+from .lora import *
+from .module import *
+from .norm import *
+from .rng import *

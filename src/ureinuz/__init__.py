@@ -28,6 +28,4 @@ from ureinuz import nn
 
 from ureinuz.maestro.opus import *
 
-from ureinuz import maestro as maestro
-
 __all__ = ['Maestro', 'ModelConfig', 'Trainer', 'TrainingConfig', 'DatasetConfig']

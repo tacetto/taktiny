@@ -1,14 +1,15 @@
 # Ureinuz
 
-**Ureinuz** is an object-oriented neural network framework and universal training engine built on top of JAX. 
+**Ureinuz** is a boutique, object-oriented neural network framework and universal training engine built natively on top of JAX. 
 
 It provides an intuitive, stateful design where models encapsulate their own weights while leveraging the lightning-fast, purely functional compilation of JAX. Every `ureinuz.nn.Module` and `Parameter` is a natively registered PyTree, allowing stateful objects to compile flawlessly with `jax.jit` and `optax`.
 
 ## ✨ Features
+- **Boutique Architecture**: A meticulously handcrafted framework featuring a unique, cohesive orchestrator aesthetic (`Maestro`, `Repertoire`, and `cosettes/`).
 - **Object-Oriented JAX**: Build models using stateful `nn.Module` and `Parameter` classes without manually separating parameters from architecture.
-- **🎼 Maestro**: A powerful HuggingFace auto-model loader. Seamlessly load, quantize (int4/int8/fp8), and automatically shard models like LLaMA and Qwen over any JAX Mesh configuration.
+- **🎼 Maestro & Repertoire**: A powerful HuggingFace auto-model loader. Seamlessly load, quantize (int4/int8/fp8), and automatically shard masterpieces from the `Repertoire` (like LLaMA and Qwen) over any JAX Mesh configuration.
+- **Dynamic Configs**: Fluid and adaptable configurations. Ureinuz elegantly parses raw Hugging Face JSON architectures directly into dynamic Python objects.
 - **Universal Trainer**: A polished, generic `Trainer` engine that can train models natively across multiple JAX-based frameworks.
-- **Unified Vision & Language Zoo**: Built-in reference implementations of ConvNeXt, UNet, Autoencoder, and LLaMA, sharing unified configuration structs.
 
 ## 🏗️ Building Modules
 
@@ -17,13 +18,12 @@ It provides an intuitive, stateful design where models encapsulate their own wei
 ```python
 import jax
 import jax.numpy as jnp
-from ureinuz.nn import Module, Linear
-from ureinuz import Rngs
+from ureinuz import nn
 
-class SimpleMLP(Module):
-    def __init__(self, in_features, hidden_features, out_features, rngs: Rngs):
-        self.fc1 = Linear(in_features, hidden_features, rngs=rngs)
-        self.fc2 = Linear(hidden_features, out_features, rngs=rngs)
+class SimpleMLP(nn.Module):
+    def __init__(self, in_features, hidden_features, out_features, rngs: nn.Rngs):
+        self.fc1 = nn.Linear(in_features, hidden_features, rngs=rngs)
+        self.fc2 = nn.Linear(hidden_features, out_features, rngs=rngs)
 
     def __call__(self, x):
         x = self.fc1(x)
@@ -32,8 +32,8 @@ class SimpleMLP(Module):
         return x
 
 # Initialize with a random seed generator
-seed_generator = Rngs(42)
-model = SimpleMLP(in_features=64, hidden_features=128, out_features=10, rngs=seed_generator)
+rngs = nn.Rngs(42)
+model = SimpleMLP(in_features=64, hidden_features=128, out_features=10, rngs=rngs)
 
 # State management for saving and checkpointing
 state_dict = model.state_dict() # or model.flat_state_dict()
@@ -42,12 +42,12 @@ model.load_state_dict(state_dict)
 
 ## 🎼 Maestro: HuggingFace & Quantization
 
-Ureinuz includes **Maestro**, an intelligent model loader that can pull HuggingFace repositories, instantiate the equivalent Ureinuz native architectures (such as LLaMA), and shard them dynamically. Maestro also supports native dynamic quantization (INT4, INT8, FP8) on-the-fly during load time.
+Ureinuz includes **Maestro**, an intelligent model loader that can pull HuggingFace repositories, match them against the registered **Repertoire**, and instantiate the equivalent Ureinuz native architectures (the `opus`). Maestro also supports native dynamic quantization (INT4, INT8, FP8) on-the-fly during load time.
 
 ```python
 import jax
 from jax.sharding import Mesh
-from ureinuz._composer.maestro import Maestro
+from ureinuz import Maestro
 
 # 1. Define your hardware mesh (e.g., for Tensor Parallelism)
 mesh = Mesh(jax.devices(), ('dp', 'tp'))
