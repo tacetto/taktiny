@@ -54,7 +54,10 @@ def build_tree_repr(name, obj, prefix="", is_last=True, is_root=False):
     
     if isinstance(obj, Parameter):
         p = obj.value.size
-        b = obj.value.size * obj.value.itemsize
+        b = 0.0
+        if hasattr(obj.value, 'itemsize'):
+            b = obj.value.size * obj.value.itemsize
+
         dt = format_dtype(obj.value.dtype)
         sh = ", ".join(map(str, obj.value.shape))
         lines.append(f"{current_prefix}{name}: {dt}[{sh}]")

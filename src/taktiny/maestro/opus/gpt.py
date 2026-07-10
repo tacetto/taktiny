@@ -11,42 +11,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Llama architectures"""
+"""GPT architectures"""
 
 from __future__ import annotations
 
+import jax.numpy as jnp
+
 from taktiny.maestro._livret import repertoire
-from taktiny.cosettes._common import TransformerLM, TransformerMM
-from taktiny.cosettes.transformers.llama import LlamaDecoder
+from taktiny.cosettes._common import TransformerLM
 from taktiny import nn
 
 
-class Llama(TransformerLM):
-    def __init__(
-        self, 
-        config, 
-        rngs: nn.Rngs = None, 
-        mesh=None, 
-        sharding_rules=None
-    ):
-        super().__init__(
-            LlamaDecoder,
-            config=config,
-            rngs=rngs, 
-            mesh=mesh, 
-            sharding_rules=sharding_rules
-        )
-
-
-class Llama4(TransformerMM):
+class GPTOSS(TransformerLM):
     def __init__(self):
         raise NotImplementedError(f'There is a plan to implement {self.__name__}.')
     
 
-repertoire.register('LlamaForCausalLM', Llama)
-repertoire.register('Llama4ForConditionalGeneration', Llama4)
+repertoire.register('GptOssForCausalLM', GPTOSS)
 
 __all__ = [
-    'Llama',
-    'Llama4'
+    'GPTOSS'
 ]

@@ -14,6 +14,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "diffusers>=0.39.0",
     "equinox>=0.13.8",
     "flax>=0.12.7",
     "optax>=0.2.8",

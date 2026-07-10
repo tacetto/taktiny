@@ -18,12 +18,12 @@ import jax
 import jax.numpy as jnp
 
 from taktiny import nn
-from taktiny.layers import RotaryEmbedding, GateMLP, Attention
 from taktiny.utils.typing import ShardMode
+from taktiny.layers import RotaryEmbedding, GateMLP, Attention
 
 
-class Qwen2TransformerBlock(nn.Module):
-    def __init__(self, config, rngs: nn.Rngs = None):
+class LlamaDecoder(nn.Module):
+    def __init__(self, config, rngs: nn.Rngs):
         shard_mode = getattr(config, 'shard_mode', ShardMode.AUTO)
         quant = getattr(config, 'quant', None)
         dot_general = getattr(config, 'dot_general', None)
@@ -34,18 +34,25 @@ class Qwen2TransformerBlock(nn.Module):
         assert (num_kv_heads := config.num_key_value_heads) is not None
         assert (max_position_embeddings := config.max_position_embeddings) is not None
         assert (rope_theta := config.rope_theta) is not None
+        assert (attention_bias := config.attention_bias) is not None
         assert (hidden_act := config.hidden_act) is not None 
         assert (intermediate_size := config.intermediate_size) is not None 
 
-        head_dim = hidden_size // num_heads
+        if (head_dim := config.head_dim) is None:
+            head_dim = hidden_size // num_heads
         
+        if (mlp_bias := config.mlp_bias) is None:
+            mlp_bias = False
+
         if (eps := config.rms_norm_eps) is None:
             eps = 1e-6
+            
+        rope_scaling = config.rope_scaling
         
         self.norm1 = nn.RMSNorm(
             hidden_size, 
             eps=eps, 
-            dtype=jnp.float32,
+            dtype=jnp.float32, 
             shard_mode=shard_mode, 
             axis_names=('embed',)
         )
@@ -58,26 +65,25 @@ class Qwen2TransformerBlock(nn.Module):
             pos_emb=RotaryEmbedding(
                 head_dim, 
                 max_position_embeddings,
-                rope_theta
+                rope_theta,
+                rope_scaling
             ),
-            bias=False,
+            bias=attention_bias,
             dtype=dtype,
             rngs=rngs,
+            # Fully Granular Logical Axes
             q_axis_names=('embed', 'heads', 'head_dim'),
             k_axis_names=('embed', 'kv_heads', 'head_dim'),
             v_axis_names=('embed', 'kv_heads', 'head_dim'),
             o_axis_names=('heads', 'head_dim', 'embed'),
             shard_mode=shard_mode,
-            q_bias=True, k_bias=True,
-            v_bias=True, o_bias=False,
             quant=quant,
             dot_general=dot_general
         )
-        
         self.norm2 = nn.RMSNorm(
             hidden_size, 
             eps=eps, 
-            dtype=jnp.float32,
+            dtype=jnp.float32, 
             shard_mode=shard_mode, 
             axis_names=('embed',)
         )
@@ -87,9 +93,10 @@ class Qwen2TransformerBlock(nn.Module):
             hidden_size=hidden_size,
             intermediate_size=intermediate_size,
             activation=activation_fn,
-            bias=False,
+            bias=mlp_bias,
             dtype=dtype,
             rngs=rngs,
+            # Fully Granular Logical Axes
             gate_axis_names=('embed', 'mlp'),
             up_axis_names=('embed', 'mlp'),
             down_axis_names=('mlp', 'embed'),
@@ -97,7 +104,6 @@ class Qwen2TransformerBlock(nn.Module):
             quant=quant,
             dot_general=dot_general
         )
-
 
     def __call__(
         self, 
@@ -109,7 +115,7 @@ class Qwen2TransformerBlock(nn.Module):
         out_sharding = None
     ):
         attn_out, new_cache = self.attn(
-            self.norm1(x, out_sharding=out_sharding), 
+            self.norm1(x), 
             attention_mask=attention_mask, 
             is_causal=is_causal, 
             kv_cache=kv_cache, 
@@ -119,7 +125,11 @@ class Qwen2TransformerBlock(nn.Module):
         
         x = x + attn_out
         x = x + self.mlp(
-            self.norm2(x, out_sharding=out_sharding), 
+            self.norm2(x), 
             out_sharding=out_sharding
         )
         return x, new_cache
+
+LlamaTransformerBlock = LlamaDecoder
+
+__all__ = ['LlamaDecoder']

@@ -18,12 +18,14 @@ from __future__ import annotations
 import jax.numpy as jnp
 
 from taktiny.maestro._livret import repertoire
-from taktiny.cosettes.transformer._common import TransformerCausalLM
-from taktiny.cosettes.transformer.gemma import GemmaTextScaledWordEmbedding, GemmaRMSNorm, GemmaTransformerBlock
+from taktiny.cosettes._common import TransformerLM, DiffusionLM, TransformerMM
+from taktiny.cosettes.transformers.gemma import (
+    GemmaTextScaledWordEmbedding, GemmaRMSNorm, GemmaTransformerBlock
+)
 from taktiny import nn
 
 
-class GemmaCausalLM(TransformerCausalLM):
+class Gemma(TransformerLM):
     def __init__(
         self, 
         config, 
@@ -66,6 +68,43 @@ class GemmaCausalLM(TransformerCausalLM):
         )
     
 
-repertoire.register('GemmaForCausalLM', GemmaCausalLM)
+class Gemma2(TransformerLM):
+    def __init__(self):
+        raise NotImplementedError(f'There is a plan to implement {self.__name__}.')
 
-__all__ = ['GemmaCausalLM']
+
+class Gemma3(TransformerMM):
+    def __init__(self):
+        raise NotImplementedError(f'There is a plan to implement {self.__name__}.')
+
+
+class Gemma4(TransformerMM):
+    def __init__(self):
+        raise NotImplementedError(f'There is a plan to implement {self.__name__}.')
+
+
+class Gemma4Unified(TransformerMM):
+    def __init__(self):
+        raise NotImplementedError(f'There is a plan to implement {self.__name__}.')
+
+
+class DiffusionGemma(DiffusionLM):
+    def __init__(self):
+        raise NotImplementedError(f'There is a plan to implement {self.__name__}.')
+
+
+repertoire.register('GemmaForCausalLM', Gemma)
+repertoire.register('Gemma2ForCausalLM', Gemma2)
+repertoire.register('Gemma3ForConditionalGeneration', Gemma3)
+repertoire.register('Gemma4ForConditionalGeneration', Gemma4)
+repertoire.register('Gemma4UnifiedForConditionalGeneration', Gemma4Unified)
+repertoire.register('DiffusionGemmaForBlockDiffusion', DiffusionGemma)
+
+__all__ = [
+    'Gemma', 
+    'Gemma2', 
+    'Gemma3', 
+    'Gemma4', 
+    'Gemma4Unified', 
+    'DiffusionGemma'
+]

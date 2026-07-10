@@ -20,22 +20,6 @@ from taktiny import nn
 from taktiny.layers.attention import JointAttention, Attention
 from taktiny.layers.ffn import FusedGateMLP
 
-@dataclass
-class Flux2Config:
-    patch_size: int = 1
-    in_channels: int = 128
-    out_channels: int = None
-    num_layers: int = 8
-    num_single_layers: int = 48
-    attention_head_dim: int = 128
-    num_attention_heads: int = 48
-    joint_attention_dim: int = 15360
-    timestep_guidance_channels: int = 256
-    mlp_ratio: float = 3.0
-    axes_dims_rope: tuple[int, ...] = (32, 32, 32, 32)
-    rope_theta: int = 2000
-    eps: float = 1e-6
-    guidance_embeds: bool = True
 
 def get_1d_rotary_pos_embed(dim: int, pos: jax.Array, theta: int = 10000):
     half_dim = dim // 2
@@ -79,7 +63,7 @@ class Flux2Modulation(nn.Module):
         return tuple(chunks[i * 3 : (i + 1) * 3] for i in range(self.mod_param_sets))
 
 class JointAttentionBlock(nn.Module):
-    def __init__(self, config: Flux2Config, seed: nn.Rngs = None):
+    def __init__(self, config, seed: nn.Rngs = None):
         hidden_size = config.num_attention_heads * config.attention_head_dim
         
         self.norm1 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=config.eps)
@@ -146,7 +130,7 @@ class JointAttentionBlock(nn.Module):
         return img, txt
 
 class SingleStreamBlock(nn.Module):
-    def __init__(self, config: Flux2Config, seed: nn.Rngs = None):
+    def __init__(self, config, seed: nn.Rngs = None):
         hidden_size = config.num_attention_heads * config.attention_head_dim
         self.norm = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=config.eps)
         
@@ -191,7 +175,7 @@ class SingleStreamBlock(nn.Module):
         return x
 
 class Flux2Transformer2DModel(nn.Module):
-    def __init__(self, config: Flux2Config, seed: nn.Rngs = None):
+    def __init__(self, config, seed: nn.Rngs = None):
         self.config = config
         self.inner_dim = config.num_attention_heads * config.attention_head_dim
         self.out_channels = config.out_channels or config.in_channels

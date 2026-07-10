@@ -15,3 +15,6 @@
 from .gemma import *
 from .llama import *
 from .qwen import *
+from .deepseek import *
+from .gemma import *
+from .gpt import *

@@ -21,7 +21,7 @@ from jax.nn.initializers import normal
 
 from taktiny import nn
 from taktiny.utils.typing import ShardMode
-from taktiny.cosettes.transformer.llama import LlamaTransformerBlock
+from taktiny.cosettes.transformers.llama import LlamaTransformerBlock
 
 
 class GemmaTextScaledWordEmbedding(nn.Embedding):
@@ -53,7 +53,7 @@ class GemmaRMSNorm(nn.RMSNorm):
         return x_norm.astype(dtype)
 
 
-class GemmaTransformerBlock(LlamaTransformerBlock):
+class GemmaDecoder(LlamaTransformerBlock):
     def __init__(self, config, rngs):
         shard_mode = getattr(config, 'shard_mode', ShardMode.AUTO)
 
@@ -78,3 +78,7 @@ class GemmaTransformerBlock(LlamaTransformerBlock):
             shard_mode=shard_mode, 
             axis_names=('embed',)
         )
+
+GemmaTransformerBlock = GemmaDecoder
+
+__all__ = ['GemmaTextScaledWordEmbedding', 'GemmaRMSNorm', 'GemmaDecoder']

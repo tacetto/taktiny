@@ -16,12 +16,16 @@
 from __future__ import annotations
 
 from taktiny.maestro._livret import repertoire
-from taktiny.cosettes.transformer._common import TransformerCausalLM
-from taktiny.cosettes.transformer.qwen import Qwen2TransformerBlock
+from taktiny.cosettes._common import TransformerLM, TransformerMM
+from taktiny.cosettes.transformers.qwen import QwenDecoder, Qwen2Decoder, Qwen3Decoder
 from taktiny import nn
 
 
-class Qwen2CausalLM(TransformerCausalLM):
+class Qwen(TransformerLM):
+    def __init__(self, *args, **kwargs):
+        raise NotImplementedError(f'There is a plan to implement {self.__name__}.')
+
+class Qwen2(TransformerLM):
     def __init__(
         self, config, 
         rngs: nn.Rngs = None, 
@@ -29,7 +33,7 @@ class Qwen2CausalLM(TransformerCausalLM):
         sharding_rules=None
     ):
         super().__init__(
-            Qwen2TransformerBlock,
+            Qwen2Decoder,
             config=config,
             rngs=rngs,
             mesh=mesh,
@@ -37,6 +41,38 @@ class Qwen2CausalLM(TransformerCausalLM):
         )
 
 
-repertoire.register('Qwen2ForCausalLM', Qwen2CausalLM)
+class Qwen3(TransformerLM):
+    def __init__(self, *args, **kwargs):
+        raise NotImplementedError(f'There is a plan to implement {self.__name__}.')
+    
 
-__all__ = ['Qwen2CausalLM']
+class Qwen3MoE(TransformerLM):
+    def __init__(self, *args, **kwargs):
+        raise NotImplementedError(f'There is a plan to implement {self.__name__}.')
+
+
+class Qwen3Next(TransformerLM):
+    def __init__(self, *args, **kwargs):
+        raise NotImplementedError(f'There is a plan to implement {self.__name__}.')
+
+
+class Qwen3HMoE(TransformerMM):
+    def __init__(self, *args, **kwargs):
+        raise NotImplementedError(f'There is a plan to implement {self.__name__}.')
+
+
+repertoire.register('QwenForCausalLM', Qwen)
+repertoire.register('Qwen2ForCausalLM', Qwen2)
+repertoire.register('Qwen3ForCausalLM', Qwen3)
+repertoire.register('Qwen3MoeForCausalLM', Qwen3MoE)
+repertoire.register('Qwen3NextForCausalLM', Qwen3Next)
+repertoire.register('Qwen3_5MoeForConditionalGeneration', Qwen3HMoE)
+
+__all__ = [
+    'Qwen',
+    'Qwen2',
+    'Qwen3',
+    'Qwen3MoE',
+    'Qwen3Next',
+    'Qwen3HMoE'
+]

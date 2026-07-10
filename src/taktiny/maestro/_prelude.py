@@ -25,9 +25,22 @@ from jax.sharding import Mesh
 from jax.experimental import mesh_utils
 from huggingface_hub import hf_hub_download
 import json
+from pprint import pprint
 
 
 class Maestro:
+    @classmethod
+    def list(cls):
+        return repertoire.available_classes()
+    
+    @classmethod
+    def available(cls):
+        return repertoire.available()
+    
+    @classmethod
+    def supported(cls, model_class: str):
+        return True if model_class in repertoire.available() else False
+    
     @classmethod
     def from_pretrained(
         cls, 

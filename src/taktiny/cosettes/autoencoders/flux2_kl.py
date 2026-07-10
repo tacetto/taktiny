@@ -23,16 +23,6 @@ from taktiny.nn import Rngs
 from taktiny.cosettes._autoencoder import Encoder, Decoder
 
 
-@dataclass
-class FluxAutoencoderConfig:
-    in_channels: int = 3
-    out_channels: int = 3
-    block_out_channels: tuple[int, ...] = (128, 256, 512, 512)
-    layers_per_block: int = 2
-    latent_channels: int = 32
-    use_quant_conv: bool = True
-    use_post_quant_conv: bool = True
-
 class AutoencoderKLFlux2(nn.Module):
     """
     Pure JAX implementation of the FLUX 2 Autoencoder (VAE).
