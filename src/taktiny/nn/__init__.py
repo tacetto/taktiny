@@ -14,11 +14,13 @@
 """Base modules for implementing a deep neural network model"""
 
 
+from .module import *
+from .rng import *
+
 from .block import *
 from .conv import *
 from .embedding import *
 from .linear import *
 from .lora import *
-from .module import *
 from .norm import *
-from .rng import *
+from .activation import *

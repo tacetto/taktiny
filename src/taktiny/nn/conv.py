@@ -17,10 +17,9 @@ import jax
 import jax.numpy as jnp
 import math
 
-from taktiny.nn.module import Module, Parameter
-from taktiny.nn.rng import Rngs
+from taktiny import nn
 
-class Conv2d(Module):
+class Conv2d(nn.Module):
     def __init__(
         self, 
         in_channels: int, 
@@ -29,8 +28,8 @@ class Conv2d(Module):
         stride: int | tuple[int, int] = 1,
         padding: str | tuple[int, int] | tuple[tuple[int, int], tuple[int, int]] = "SAME",
         groups: int = 1,
-        use_bias: bool = True,
-        seed: Rngs = None
+        use_bias: bool = True, 
+        *, rngs: nn.Rngs
     ):
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -57,25 +56,20 @@ class Conv2d(Module):
         # LeCun uniform initialization
         k = math.sqrt(1.0 / (in_channels_per_group * kernel_size[0] * kernel_size[1]))
         
-        if seed is not None:
-            w_key = seed()
-            b_key = seed()
-            # Shape: (H, W, I, O)
-            w_shape = (*kernel_size, in_channels_per_group, out_channels)
-            w_init = jax.random.uniform(w_key, w_shape, minval=-k, maxval=k)
-            
-            if use_bias:
-                b_init = jax.random.uniform(b_key, (out_channels,), minval=-k, maxval=k)
-            else:
-                b_init = None
-        else:
-            w_shape = (*kernel_size, in_channels_per_group, out_channels)
-            w_init = jnp.zeros(w_shape)
-            b_init = jnp.zeros((out_channels,)) if use_bias else None
-            
-        self.weight = Parameter(w_init)
+        w_key = rngs()
+        b_key = rngs()
+        # Shape: (H, W, I, O)
+        w_shape = (*kernel_size, in_channels_per_group, out_channels)
+        w_init = jax.random.uniform(w_key, w_shape, minval=-k, maxval=k)
+        
         if use_bias:
-            self.bias = Parameter(b_init)
+            b_init = jax.random.uniform(b_key, (out_channels,), minval=-k, maxval=k)
+        else:
+            b_init = None
+            
+        self.weight = nn.Parameter(w_init)
+        if use_bias:
+            self.bias = nn.Parameter(b_init)
         else:
             self.bias = None
 
@@ -102,7 +96,7 @@ class Conv2d(Module):
             
         return out
 
-class Upsample2d(Module):
+class Upsample2d(nn.Module):
     def __init__(self, scale_factor: int = 2, method: str = "nearest"):
         self.scale_factor = scale_factor
         self.method = method

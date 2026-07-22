@@ -20,14 +20,14 @@ from dataclasses import dataclass
 
 from taktiny import nn
 from taktiny.nn import Rngs
-from taktiny.cosettes._autoencoder import Encoder, Decoder
+from taktiny.cosettes.autoencoders._vae import Encoder, Decoder
 
 
 class AutoencoderKLFlux2(nn.Module):
     """
     Pure JAX implementation of the FLUX 2 Autoencoder (VAE).
     """
-    def __init__(self, config: FluxAutoencoderConfig, seed: nn.Rngs = None):
+    def __init__(self, config, rngs: nn.Rngs = None):
         self.config = config
         
         # Diffusers' double_z=True means the encoder outputs 2 * latent_channels

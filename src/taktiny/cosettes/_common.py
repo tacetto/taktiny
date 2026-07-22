@@ -375,7 +375,10 @@ class TransformerMM(PretrainedModel):
 
 
 class DiffusionIM(PretrainedModel):
-    def __init__(self):
+    def __init__(
+        self,
+        **kwargs
+    ):
         raise NotImplementedError(f'There is a plan to implement {self.__name__}.')
 
 

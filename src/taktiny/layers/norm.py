@@ -88,3 +88,34 @@ class AdaLayerNormChunks(AdaLayerNorm):
         
         # Return the parameter-free normalized x and the chunks tuple
         return normed_x, chunks
+
+
+
+class SpatialNorm(nn.Module):
+    """
+    Spatially conditioned normalization as defined in https://huggingface.co/papers/2209.09002.
+
+    Args:
+        f_channels (`int`):
+            The number of channels for input to group normalization layer, and output of the spatial norm layer.
+        zq_channels (`int`):
+            The number of channels for the quantized vector as described in the paper.
+    """
+
+    def __init__(
+        self,
+        f_channels: int,
+        zq_channels: int,
+        rngs: nn.Rngs
+    ):
+        super().__init__()
+        # self.norm_layer = nn.GroupNorm(num_channels=f_channels, num_groups=32, eps=1e-6, affine=True)
+        self.norm_layer = nn.GroupNorm(num_channels=f_channels, num_groups=32, eps=1e-6)
+        self.conv_y = nn.Conv2d(zq_channels, f_channels, kernel_size=1, stride=1, padding=0, rngs=rngs)
+        self.conv_b = nn.Conv2d(zq_channels, f_channels, kernel_size=1, stride=1, padding=0, rngs=rngs)
+
+    def forward(self, f: jax.Array, zq: jax.Array) -> jax.Array:
+        zq = jax.image.resize(zq, shape=f.shape, method='nearest')
+        norm_f = self.norm_layer(f)
+        new_f = norm_f * self.conv_y(zq) + self.conv_b(zq)
+        return new_f

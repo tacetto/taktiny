@@ -72,3 +72,37 @@ class ResnetBlock2D(nn.Module):
         h = self.conv2(h)
         
         return h + res
+
+
+class Downsample2D(nn.Module):
+    pass
+
+
+class FirDownsample2D(nn.Module):
+    pass
+
+
+class FirUpsample2D(nn.Module):
+    pass
+
+
+class KDownsample2D(nn.Module):
+    pass
+
+
+class KUpsample2D(nn.Module):
+    pass
+
+
+# class ResnetBlock2D(nn.Module):
+#     pass
+
+
+class ResnetBlockCondNorm2D(nn.Module):
+    pass
+
+
+class Upsample2D(nn.Module):
+    pass
+
+
